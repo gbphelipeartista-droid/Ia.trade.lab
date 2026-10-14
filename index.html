@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IA Trader Lab</title>
+<style>
+body{margin:0;padding:16px;background:#0b1020;color:#eef3ff;font:16px Arial}
+.card{background:#141c30;padding:16px;border-radius:16px;margin:12px 0}
+button,input,select{padding:12px;border-radius:9px;border:0;margin:5px 0;max-width:100%}
+button{font-weight:bold;cursor:pointer}
+.up{background:#35d39a}.down{background:#ff667d}
+.neutral{background:#304261;color:white}
+input,select{background:#091426;color:white;border:1px solid #35415a}
+.balance{font-size:30px;font-weight:bold}
+.muted{color:#a9b6ce;font-size:13px}
+canvas{width:100%;height:180px;background:#091426}
+</style>
+</head>
+<body>
+<h2>IA Trader Lab</h2>
+<p class="muted">Simulador educativo — sem dinheiro real</p>
+
+<div class="card">
+<p>Saldo virtual</p>
+<div class="balance" id="saldo">R$ 50,00</div>
+<p id="resultado">Resultado: R$ 0,00</p>
+<p id="estatistica">Operações: 0 | Acertos: 0</p>
+</div>
+
+<div class="card">
+<h3>Mercado simulado</h3>
+<p>Preço: <b id="preco">1.08420</b></p>
+<canvas id="grafico" width="600" height="200"></canvas>
+<p id="sinal">Analisando...</p>
+<p class="muted">Os preços são aleatórios, não são cotações reais.</p>
+</div>
+
+<div class="card">
+<h3>Configurar operação</h3>
+<label>Valor em R$</label><br>
+<input id="valor" type="number" min="1" value="2"><br>
+<label>Retorno hipotético (%)</label><br>
+<input id="retorno" type="number" min="1" max="95" value="80"><br>
+<label>Duração</label><br>
+<select id="duracao">
+<option value="10">10 segundos</option>
+<option value="30">30 segundos</option>
+<option value="60">1 minuto</option>
+</select><br>
+<button class="up" onclick="abrir('UP')">⬆ PREÇO SOBE</button>
+<button class="down" onclick="abrir('DOWN')">⬇ PREÇO CAI</button>
+<button class="neutral" onclick="automatico()" id="auto">Iniciar automático</button>
+<button class="neutral" onclick="reiniciar()">Reiniciar</button>
+<p id="status" class="muted">Escolha uma direção.</p>
+</div>
+
+<div class="card">
+<h3>Histórico</h3>
+<div id="historico">Nenhuma operação.</div>
+</div>
+
+<div class="card muted">
+Protótipo de demonstração. Não conecta à Olymptrade, não prevê o mercado de forma confiável e não realiza operações reais. Uma operação errada pode perder todo o valor investido.
+</div>
+
+<script>
+let saldo=50,inicial=50,precos=[1.0842];
+let acertos=0,total=0,historico=[],aberta=null,auto=null;
+const el=id=>document.getElementById(id);
+const dinheiro=n=>'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+for(let i=0;i<50;i++)precos.push(precos.at(-1)+(Math.random()-.5)*.0002);
+
+function media(n){
+ let a=precos.slice(-n);
+ return a.reduce((s,v)=>s+v,0)/a.length;
+}
+function sinal(){return media(5)>=media(15)?'UP':'DOWN'}
+
+function atualizar(){
+ precos.push(Math.max(.5,precos.at(-1)+(Math.random()-.5)*.0003));
+ if(precos.length>80)precos.shift();
+ el('preco').textContent=precos.at(-1).toFixed(5);
+ el('sinal').textContent='Sinal didático: '+(sinal()==='UP'?'SUBIDA':'QUEDA');
+ el('sinal').style.color=sinal()==='UP'?'#35d39a':'#ff667d';
+ desenhar();
+}
+function desenhar(){
+ let c=el('grafico'),ctx=c.getContext('2d');
+ let a=precos,w=c.width,h=c.height;
+ let min=Math.min(...a),max=Math.max(...a),r=max-min||.001;
+ ctx.clearRect(0,0,w,h);ctx.beginPath();
+ a.forEach((v,i)=>{
+  let x=i/(a.length-1)*w,y=h-10-(v-min)/r*(h-20);
+  i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+ });
+ ctx.strokeStyle='#76a7ff';ctx.lineWidth=3;ctx.stroke();
+}
+function abrir(dir){
+ if(aberta){el('status').textContent='Aguarde a operação terminar.';return}
+ let valor=Number(el('valor').value);
+ let retorno=Number(el('retorno').value);
+ let duracao=Number(el('duracao').value);
+ if(valor<1||valor>saldo){el('status').textContent='Valor inválido para o saldo.';return}
+ if(retorno<1||retorno>95){el('status').textContent='Retorno deve ficar entre 1% e 95%.';return}
+ saldo-=valor;
+ aberta={dir,valor,retorno,entrada:precos.at(-1),duracao};
+ render();
+ el('status').textContent='Operação aberta. Aguarde '+duracao+' segundos.';
+ aberta.timer=setTimeout(fechar,duracao*1000);
+}
+function fechar(){
+ if(!aberta)return;
+ let p=aberta;aberta=null;
+ let fim=precos.at(-1);
+ let ganhou=(p.dir==='UP'&&fim>p.entrada)||(p.dir==='DOWN'&&fim<p.entrada);
+ let lucro=ganhou?p.valor*p.retorno/100:-p.valor;
+ if(ganhou){saldo+=p.valor+lucro;acertos++}
+ total++;
+ historico.unshift((p.dir==='UP'?'SUBIDA':'QUEDA')+' | '+(ganhou?'LUCRO ':'PERDA ')+dinheiro(lucro));
+ el('status').textContent=ganhou?'Acertou! Lucro simulado: '+dinheiro(lucro):'Errou! Perda simulada: '+dinheiro(p.valor);
+ render();
+}
+function render(){
+ el('saldo').textContent=dinheiro(saldo);
+ el('resultado').textContent='Resultado: '+dinheiro(saldo-inicial);
+ el('estatistica').textContent='Operações: '+total+' | Acertos: '+acertos;
+ el('historico').innerHTML=historico.length?historico.map(x=>'<p>'+x+'</p>').join(''):'Nenhuma operação.';
+}
+function automatico(){
+ if(auto){clearInterval(auto);auto=null;el('auto').textContent='Iniciar automático';return}
+ el('auto').textContent='Pausar automático';
+ auto=setInterval(()=>{if(!aberta)abrir(sinal())},3000);
+}
+function reiniciar(){
+ if(aberta)clearTimeout(aberta.timer);
+ if(auto)clearInterval(auto);
+ auto=null;aberta=null;saldo=inicial=50;acertos=total=0;historico=[];
+ el('auto').textContent='Iniciar automático';render();
+ el('status').textContent='Simulação reiniciada.';
+}
+setInterval(atualizar,1000);atualizar();render();
+</script>
+</body>
+</html>
