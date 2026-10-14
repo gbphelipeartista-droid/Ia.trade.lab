@@ -1,147 +1,493 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IA Trader Lab</title>
+<meta name="theme-color" content="#0b1020">
+<title>LA Trade Lab | Duas estratégias</title>
 <style>
-body{margin:0;padding:16px;background:#0b1020;color:#eef3ff;font:16px Arial}
-.card{background:#141c30;padding:16px;border-radius:16px;margin:12px 0}
-button,input,select{padding:12px;border-radius:9px;border:0;margin:5px 0;max-width:100%}
-button{font-weight:bold;cursor:pointer}
-.up{background:#35d39a}.down{background:#ff667d}
-.neutral{background:#304261;color:white}
-input,select{background:#091426;color:white;border:1px solid #35415a}
-.balance{font-size:30px;font-weight:bold}
-.muted{color:#a9b6ce;font-size:13px}
-canvas{width:100%;height:180px;background:#091426}
+:root {
+  --bg:#0b1020; --card:#151e32; --deep:#0a1428;
+  --text:#edf2ff; --muted:#98a6c3; --blue:#83aaff;
+  --green:#36d69a; --red:#ff6688; --yellow:#f5c76a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:15px/1.5 system-ui,sans-serif}
+main{max-width:780px;margin:auto;padding:18px 13px 40px}
+header{padding:8px 3px 18px}
+h1{font-size:25px;margin:7px 0}
+h2{font-size:19px;margin:0 0 14px}
+h3{font-size:16px;margin:0 0 8px}
+p{margin:6px 0}
+.small{font-size:12px;color:var(--muted)}
+.card{background:var(--card);border-radius:21px;padding:19px;
+  margin-bottom:16px}
+.pill{display:inline-block;background:var(--deep);color:var(--muted);
+  border-radius:30px;padding:5px 10px;font-size:12px}
+.balance{font-size:35px;font-weight:750}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{background:var(--deep);border-radius:12px;padding:12px;min-width:0}
+.stat span{display:block;font-size:12px;color:var(--muted)}
+.stat strong{display:block;font-size:19px;overflow-wrap:anywhere}
+.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.panel{border:1px solid #34415c;border-radius:14px;padding:13px;min-width:0}
+input,select{width:100%;padding:11px;border-radius:9px;
+  border:1px solid #34415c;background:var(--deep);color:var(--text);
+  font:inherit}
+label{display:block;color:var(--muted);font-size:12px;margin:12px 0 5px}
+button{border:0;border-radius:10px;padding:12px 10px;
+  font:inherit;font-weight:700;cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}
+.primary{background:var(--blue);color:#071020;width:100%;margin-top:12px}
+.secondary{background:#293854;color:var(--text);width:100%;margin-top:9px}
+.green{color:var(--green)} .red{color:var(--red)} .yellow{color:var(--yellow)}
+canvas{width:100%;height:190px;background:var(--deep);
+  border-radius:10px;display:block;margin:12px 0}
+.signal{font-weight:750;font-size:19px;margin:8px 0}
+.note{background:var(--deep);padding:12px;border-radius:10px;
+  color:var(--muted);font-size:12px;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{text-align:left;padding:9px 5px;border-bottom:1px solid #2b3851}
+th{color:var(--muted);font-weight:500}
+.table-wrap{overflow-x:auto}
+progress{width:100%;height:13px;accent-color:var(--blue)}
+@media(max-width:390px){
+  .card{padding:15px}.balance{font-size:30px}
+  .stat strong{font-size:16px}.columns{gap:7px}
+}
 </style>
 </head>
 <body>
-<h2>IA Trader Lab</h2>
-<p class="muted">Simulador educativo — sem dinheiro real</p>
+<main>
+<header>
+  <span class="pill">LA TRADE LAB · LABORATÓRIO EDUCATIVO</span>
+  <h1>Duas estratégias em paralelo</h1>
+  <p class="small">Mercado inteiramente sintético. Nenhuma ordem real é enviada.</p>
+</header>
 
-<div class="card">
-<p>Saldo virtual</p>
-<div class="balance" id="saldo">R$ 50,00</div>
-<p id="resultado">Resultado: R$ 0,00</p>
-<p id="estatistica">Operações: 0 | Acertos: 0</p>
-</div>
+<section class="card">
+  <h2>Mercado simulado</h2>
+  <p class="small">Preço sintético atual</p>
+  <div id="price" class="balance">1.08342</div>
+  <canvas id="chart" width="700" height="230"></canvas>
+  <div class="grid">
+    <div class="stat"><span>Média curta</span><strong id="fast">—</strong></div>
+    <div class="stat"><span>Média longa</span><strong id="slow">—</strong></div>
+    <div class="stat"><span>RSI (14)</span><strong id="rsi">—</strong></div>
+    <div class="stat"><span>Momentum</span><strong id="momentum">—</strong></div>
+  </div>
+  <div class="note">
+    Preços gerados por um processo aleatório com pequenas oscilações.
+    Indicadores técnicos não garantem que a próxima variação seguirá o sinal.
+  </div>
+</section>
 
-<div class="card">
-<h3>Mercado simulado</h3>
-<p>Preço: <b id="preco">1.08420</b></p>
-<canvas id="grafico" width="600" height="200"></canvas>
-<p id="sinal">Analisando...</p>
-<p class="muted">Os preços são aleatórios, não são cotações reais.</p>
-</div>
+<section class="card">
+  <h2>Comparação em paralelo</h2>
+  <div class="columns">
+    <div class="panel">
+      <span class="pill">ESTRATÉGIA A</span>
+      <h3 style="margin-top:9px">Conservadora</h3>
+      <div id="signalA" class="signal yellow">AGUARDAR</div>
+      <p id="reasonA" class="small">Analisando...</p>
+      <div class="stat"><span>Saldo virtual</span><strong id="balanceA">R$ 50,00</strong></div>
+      <p class="small">Resultado: <b id="netA">R$ 0,00</b></p>
+      <p class="small">Acertos: <b id="winsA">0</b></p>
+      <p class="small">Operações: <b id="tradesA">0</b></p>
+      <p class="small">Taxa de acerto: <b id="rateA">—</b></p>
+      <p class="small">Perdas seguidas: <b id="streakA">0</b></p>
+    </div>
+    <div class="panel">
+      <span class="pill">ESTRATÉGIA B</span>
+      <h3 style="margin-top:9px">Experimental</h3>
+      <div id="signalB" class="signal yellow">AGUARDAR</div>
+      <p id="reasonB" class="small">Analisando...</p>
+      <div class="stat"><span>Saldo virtual</span><strong id="balanceB">R$ 50,00</strong></div>
+      <p class="small">Resultado: <b id="netB">R$ 0,00</b></p>
+      <p class="small">Acertos: <b id="winsB">0</b></p>
+      <p class="small">Operações: <b id="tradesB">0</b></p>
+      <p class="small">Taxa de acerto: <b id="rateB">—</b></p>
+      <p class="small">Perdas seguidas: <b id="streakB">0</b></p>
+    </div>
+  </div>
+  <div class="note">
+    Ambas observam os mesmos preços sintéticos, mas têm regras separadas.
+    Os resultados são virtuais e não demonstram desempenho em mercado real.
+  </div>
+</section>
 
-<div class="card">
-<h3>Configurar operação</h3>
-<label>Valor em R$</label><br>
-<input id="valor" type="number" min="1" value="2"><br>
-<label>Retorno hipotético (%)</label><br>
-<input id="retorno" type="number" min="1" max="95" value="80"><br>
-<label>Duração</label><br>
-<select id="duracao">
-<option value="10">10 segundos</option>
-<option value="30">30 segundos</option>
-<option value="60">1 minuto</option>
-</select><br>
-<button class="up" onclick="abrir('UP')">⬆ PREÇO SOBE</button>
-<button class="down" onclick="abrir('DOWN')">⬇ PREÇO CAI</button>
-<button class="neutral" onclick="automatico()" id="auto">Iniciar automático</button>
-<button class="neutral" onclick="reiniciar()">Reiniciar</button>
-<p id="status" class="muted">Escolha uma direção.</p>
-</div>
+<section class="card">
+  <h2>Configurações do teste</h2>
+  <label for="stake">Entrada por operação (R$)</label>
+  <select id="stake">
+    <option value="1">R$ 1,00</option>
+    <option value="2" selected>R$ 2,00</option>
+  </select>
+  <label for="payout">Retorno sobre a entrada quando acerta</label>
+  <select id="payout"><option value="0.8">80%</option></select>
+  <label for="duration">Duração de cada operação simulada</label>
+  <select id="duration">
+    <option value="3">3 atualizações</option>
+    <option value="5" selected>5 atualizações</option>
+    <option value="10">10 atualizações</option>
+  </select>
+  <label for="testCount">Tamanho do laboratório</label>
+  <select id="testCount">
+    <option value="500">500 operações por estratégia</option>
+    <option value="1000">1.000 operações por estratégia</option>
+  </select>
+  <button id="runTest" class="primary">Executar laboratório de comparação</button>
+  <progress id="progress" value="0" max="100" hidden></progress>
+  <p id="testStatus" class="small">Laboratório pronto para iniciar.</p>
+  <div id="testResults" class="note">Os resultados aparecerão aqui após o teste.</div>
+  <button id="toggleLive" class="secondary">Iniciar monitoramento contínuo</button>
+  <button id="reset" class="secondary">Reiniciar sessão virtual</button>
+</section>
 
-<div class="card">
-<h3>Histórico</h3>
-<div id="historico">Nenhuma operação.</div>
-</div>
+<section class="card">
+  <h2>Histórico recente</h2>
+  <div class="table-wrap" id="history">
+    <p class="small">Nenhuma operação concluída.</p>
+  </div>
+</section>
 
-<div class="card muted">
-Protótipo de demonstração. Não conecta à Olymptrade, não prevê o mercado de forma confiável e não realiza operações reais. Uma operação errada pode perder todo o valor investido.
-</div>
+<section class="card">
+  <h2>Como interpretar</h2>
+  <p>• Saldo inicial de cada estratégia: R$ 50,00.</p>
+  <p>• Entrada padrão: R$ 2,00.</p>
+  <p>• Acerto: lucro de R$ 1,60; erro: perda de R$ 2,00.</p>
+  <p>• Limite de perda por estratégia: R$ 5,00 por sessão.</p>
+  <p>• Pausa após 3 perdas consecutivas.</p>
+  <p>• AGUARDAR significa que os filtros não concordaram.</p>
+  <div class="note">
+    O laboratório usa dados sintéticos e não é uma validação de estratégia
+    financeira. Não selecione uma estratégia apenas por ter lucrado em uma
+    execução aleatória. Para avaliar regras de mercado, seriam necessários
+    dados reais adequados, custos e testes fora da amostra.
+  </div>
+</section>
+</main>
 
 <script>
-let saldo=50,inicial=50,precos=[1.0842];
-let acertos=0,total=0,historico=[],aberta=null,auto=null;
-const el=id=>document.getElementById(id);
-const dinheiro=n=>'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+(() => {
+"use strict";
 
-for(let i=0;i<50;i++)precos.push(precos.at(-1)+(Math.random()-.5)*.0002);
+const $ = id => document.getElementById(id);
+const INITIAL = 50, DAILY_LIMIT = 5, MAX_STREAK = 3;
+const money = n => n.toLocaleString("pt-BR", {
+  style:"currency", currency:"BRL"
+});
+const fmt = n => n.toFixed(5);
 
-function media(n){
- let a=precos.slice(-n);
- return a.reduce((s,v)=>s+v,0)/a.length;
-}
-function sinal(){return media(5)>=media(15)?'UP':'DOWN'}
+let price = 1.08342;
+let prices = [];
+let live = false;
+let busy = false;
+let liveTimer = null;
+let liveHistory = [];
+let states = [newState(), newState()];
+let lastSignals = ["AGUARDAR","AGUARDAR"];
 
-function atualizar(){
- precos.push(Math.max(.5,precos.at(-1)+(Math.random()-.5)*.0003));
- if(precos.length>80)precos.shift();
- el('preco').textContent=precos.at(-1).toFixed(5);
- el('sinal').textContent='Sinal didático: '+(sinal()==='UP'?'SUBIDA':'QUEDA');
- el('sinal').style.color=sinal()==='UP'?'#35d39a':'#ff667d';
- desenhar();
+function newState() {
+  return {
+    balance:INITIAL, net:0, trades:0, wins:0, losses:0,
+    streak:0, peak:INITIAL, maxDD:0, paused:false,
+    pending:null, cooldown:0
+  };
 }
-function desenhar(){
- let c=el('grafico'),ctx=c.getContext('2d');
- let a=precos,w=c.width,h=c.height;
- let min=Math.min(...a),max=Math.max(...a),r=max-min||.001;
- ctx.clearRect(0,0,w,h);ctx.beginPath();
- a.forEach((v,i)=>{
-  let x=i/(a.length-1)*w,y=h-10-(v-min)/r*(h-20);
-  i?ctx.lineTo(x,y):ctx.moveTo(x,y);
- });
- ctx.strokeStyle='#76a7ff';ctx.lineWidth=3;ctx.stroke();
+
+// Gerador didático, sem conexão a cotações externas.
+function nextPrice(series, current) {
+  const last = series.length ? series[series.length-1] : current;
+  const prev = series.length > 1 ? series[series.length-2] : last;
+  const drift = (prev-last)*0.12;
+  return Math.max(0.5, last + (Math.random()-0.5)*0.0009 + drift);
 }
-function abrir(dir){
- if(aberta){el('status').textContent='Aguarde a operação terminar.';return}
- let valor=Number(el('valor').value);
- let retorno=Number(el('retorno').value);
- let duracao=Number(el('duracao').value);
- if(valor<1||valor>saldo){el('status').textContent='Valor inválido para o saldo.';return}
- if(retorno<1||retorno>95){el('status').textContent='Retorno deve ficar entre 1% e 95%.';return}
- saldo-=valor;
- aberta={dir,valor,retorno,entrada:precos.at(-1),duracao};
- render();
- el('status').textContent='Operação aberta. Aguarde '+duracao+' segundos.';
- aberta.timer=setTimeout(fechar,duracao*1000);
+
+function tickSeries(series, current) {
+  const p = nextPrice(series, current);
+  series.push(p);
+  if (series.length > 160) series.shift();
+  return p;
 }
-function fechar(){
- if(!aberta)return;
- let p=aberta;aberta=null;
- let fim=precos.at(-1);
- let ganhou=(p.dir==='UP'&&fim>p.entrada)||(p.dir==='DOWN'&&fim<p.entrada);
- let lucro=ganhou?p.valor*p.retorno/100:-p.valor;
- if(ganhou){saldo+=p.valor+lucro;acertos++}
- total++;
- historico.unshift((p.dir==='UP'?'SUBIDA':'QUEDA')+' | '+(ganhou?'LUCRO ':'PERDA ')+dinheiro(lucro));
- el('status').textContent=ganhou?'Acertou! Lucro simulado: '+dinheiro(lucro):'Errou! Perda simulada: '+dinheiro(p.valor);
- render();
+
+function mean(a) {
+  return a.reduce((s,v)=>s+v,0)/a.length;
 }
-function render(){
- el('saldo').textContent=dinheiro(saldo);
- el('resultado').textContent='Resultado: '+dinheiro(saldo-inicial);
- el('estatistica').textContent='Operações: '+total+' | Acertos: '+acertos;
- el('historico').innerHTML=historico.length?historico.map(x=>'<p>'+x+'</p>').join(''):'Nenhuma operação.';
+function rsi(a, period=14) {
+  if (a.length < period+1) return null;
+  let up=0, down=0;
+  for(let i=a.length-period;i<a.length;i++){
+    const d=a[i]-a[i-1];
+    if(d>0) up+=d; else down-=d;
+  }
+  if(up===0 && down===0) return 50;
+  if(down===0) return 100;
+  return 100-100/(1+up/down);
 }
-function automatico(){
- if(auto){clearInterval(auto);auto=null;el('auto').textContent='Iniciar automático';return}
- el('auto').textContent='Pausar automático';
- auto=setInterval(()=>{if(!aberta)abrir(sinal())},3000);
+function indicators(a) {
+  if(a.length<20) return null;
+  return {
+    fast:mean(a.slice(-5)),
+    slow:mean(a.slice(-12)),
+    rsi:rsi(a,14),
+    momentum:(a[a.length-1]-a[a.length-4])/a[a.length-4]*100,
+    recent:mean(a.slice(-4))-mean(a.slice(-8,-4))
+  };
 }
-function reiniciar(){
- if(aberta)clearTimeout(aberta.timer);
- if(auto)clearInterval(auto);
- auto=null;aberta=null;saldo=inicial=50;acertos=total=0;historico=[];
- el('auto').textContent='Iniciar automático';render();
- el('status').textContent='Simulação reiniciada.';
+
+// Estratégia A: filtros conservadores, mais restritivos.
+function strategyA(a) {
+  const x=indicators(a);
+  if(!x) return {signal:"AGUARDAR",reason:"Aguardando dados suficientes."};
+  if(x.fast>x.slow && x.momentum>0.005 && x.rsi>=52 && x.rsi<=65)
+    return {signal:"SUBIDA",reason:"Médias, momentum e RSI alinhados."};
+  if(x.fast<x.slow && x.momentum< -0.005 && x.rsi>=35 && x.rsi<=48)
+    return {signal:"QUEDA",reason:"Médias, momentum e RSI alinhados."};
+  return {signal:"AGUARDAR",reason:"Filtros conservadores não concordam."};
 }
-setInterval(atualizar,1000);atualizar();render();
+
+// Estratégia B: regra experimental diferente; não é IA treinada.
+function strategyB(a) {
+  const x=indicators(a);
+  if(!x) return {signal:"AGUARDAR",reason:"Aguardando dados suficientes."};
+  const trendUp=x.fast>x.slow;
+  const trendDown=x.fast<x.slow;
+  if(trendUp && x.recent>0 && x.rsi>=50 && x.rsi<68)
+    return {signal:"SUBIDA",reason:"Tendência e impulso positivos."};
+  if(trendDown && x.recent<0 && x.rsi>32 && x.rsi<=50)
+    return {signal:"QUEDA",reason:"Tendência e impulso negativos."};
+  return {signal:"AGUARDAR",reason:"Critérios experimentais não concordam."};
+}
+
+function signalClass(s) {
+  return s==="SUBIDA"?"green":s==="QUEDA"?"red":"yellow";
+}
+function canOpen(s, stake) {
+  return !s.paused && !s.pending && s.balance>=stake &&
+    (INITIAL-s.balance)<DAILY_LIMIT-1e-8 && s.streak<MAX_STREAK;
+}
+function checkPause(s) {
+  if(INITIAL-s.balance>=DAILY_LIMIT-1e-8) s.paused=true;
+  if(s.streak>=MAX_STREAK) s.paused=true;
+}
+function openTrade(s, signal, current, stake, payout, duration, id) {
+  if(!canOpen(s,stake) || !["SUBIDA","QUEDA"].includes(signal)) return;
+  s.pending={signal,start:current,stake,payout,duration,elapsed:0,id};
+}
+function settle(s, current, log, label) {
+  if(!s.pending) return;
+  const t=s.pending;
+  const move=current-t.start;
+  const win=t.signal==="SUBIDA"?move>0:move<0;
+  const result=win?t.stake*t.payout:-t.stake;
+  s.balance+=result;
+  s.net+=result;
+  s.trades++;
+  if(win){s.wins++;s.streak=0;}
+  else{s.losses++;s.streak++;}
+  s.peak=Math.max(s.peak,s.balance);
+  s.maxDD=Math.max(s.maxDD,s.peak-s.balance);
+  s.pending=null;
+  s.cooldown=2;
+  checkPause(s);
+  log.unshift({
+    label,id:t.id,signal:t.signal,stake:t.stake,
+    result,win,balance:s.balance
+  });
+  if(log.length>40) log.length=40;
+}
+
+function updateLive() {
+  price=tickSeries(prices,price);
+  const results=[strategyA(prices),strategyB(prices)];
+  const stake=Number($("stake").value);
+  const payout=Number($("payout").value);
+  const duration=Number($("duration").value);
+
+  states.forEach((s,i)=>{
+    if(s.pending) {
+      s.pending.elapsed++;
+      if(s.pending.elapsed>=s.pending.duration)
+        settle(s,price,liveHistory,i===0?"A":"B");
+    } else if(live && !s.paused) {
+      if(s.cooldown>0) s.cooldown--;
+      else openTrade(s,results[i].signal,price,stake,payout,duration,
+        s.trades+1);
+    }
+  });
+  lastSignals=results.map(r=>r.signal);
+  render(results);
+}
+
+function render(results) {
+  $("price").textContent=fmt(price);
+  const x=indicators(prices);
+  $("fast").textContent=x?fmt(x.fast):"—";
+  $("slow").textContent=x?fmt(x.slow):"—";
+  $("rsi").textContent=x?x.rsi.toFixed(1):"—";
+  $("momentum").textContent=x?x.momentum.toFixed(3)+"%":"—";
+
+  if(!results) results=[strategyA(prices),strategyB(prices)];
+  results.forEach((r,i)=>{
+    const suffix=i===0?"A":"B", s=states[i];
+    $("signal"+suffix).textContent=r.signal;
+    $("signal"+suffix).className="signal "+signalClass(r.signal);
+    $("reason"+suffix).textContent=r.reason+(s.paused?" · PAUSADA POR RISCO":"");
+    $("balance"+suffix).textContent=money(s.balance);
+    $("net"+suffix).textContent=money(s.net);
+    $("net"+suffix).className=s.net>=0?"green":"red";
+    $("wins"+suffix).textContent=s.wins;
+    $("trades"+suffix).textContent=s.trades;
+    $("rate"+suffix).textContent=s.trades?(s.wins/s.trades*100).toFixed(1)+"%":"—";
+    $("streak"+suffix).textContent=s.streak;
+  });
+  drawChart();
+  renderHistory();
+}
+
+function drawChart() {
+  const c=$("chart"),ctx=c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.fillStyle="#0a1428";ctx.fillRect(0,0,c.width,c.height);
+  if(prices.length<2)return;
+  const min=Math.min(...prices),max=Math.max(...prices),range=max-min||1;
+  ctx.strokeStyle="#83aaff";ctx.lineWidth=2.5;ctx.beginPath();
+  prices.forEach((p,i)=>{
+    const xx=8+i/(prices.length-1)*(c.width-16);
+    const yy=c.height-12-(p-min)/range*(c.height-24);
+    if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+  });
+  ctx.stroke();
+}
+function renderHistory() {
+  if(!liveHistory.length) {
+    $("history").innerHTML='<p class="small">Nenhuma operação concluída.</p>';
+    return;
+  }
+  $("history").innerHTML="<table><thead><tr><th>Sistema</th><th>Direção</th>"+
+    "<th>Resultado</th><th>Variação</th><th>Saldo</th></tr></thead><tbody>"+
+    liveHistory.map(h=>`<tr><td>${h.label}</td><td>${h.signal}</td>`+
+      `<td class="${h.win?'green':'red'}">${h.win?'Acerto':'Erro'}</td>`+
+      `<td>${money(h.result)}</td><td>${money(h.balance)}</td></tr>`).join("")+
+    "</tbody></table>";
+}
+
+// Cada teste tem seus próprios preços e saldos virtuais.
+// Não usa dados reais nem compartilha o histórico da sessão contínua.
+function simulateTest(count, seedPrices, current, strategyFn, stake, payout, duration) {
+  let series=seedPrices.slice();
+  let p=current;
+  const s=newState();
+  let tradeId=0, ticks=0, log=[];
+  let guard=0;
+  while(s.trades<count && guard<count*duration*12+10000) {
+    guard++;
+    p=tickSeries(series,p);
+    if(s.pending) {
+      s.pending.elapsed++;
+      if(s.pending.elapsed>=s.pending.duration)
+        settle(s,p,log,"T");
+    } else if(!s.paused && canOpen(s,stake)) {
+      const r=strategyFn(series);
+      if(r.signal!=="AGUARDAR")
+        openTrade(s,r.signal,p,stake,payout,duration,++tradeId);
+    }
+    ticks++;
+    // Evita teste infinito caso os filtros quase nunca gerem sinais.
+  }
+  return {...s, ticks, completed:s.trades, stopped:s.paused ||
+    s.trades<count};
+}
+
+async function runLaboratory() {
+  if(busy)return;
+  busy=true;
+  live=false;
+  clearInterval(liveTimer);
+  $("toggleLive").textContent="Iniciar monitoramento contínuo";
+  $("runTest").disabled=true;
+  $("progress").hidden=false;
+  $("progress").value=0;
+  $("testResults").textContent="Executando simulações independentes...";
+  const count=Number($("testCount").value);
+  const stake=Number($("stake").value);
+  const payout=Number($("payout").value);
+  const duration=Number($("duration").value);
+  const base=prices.slice();
+  const start=price;
+  const all=[];
+
+  // Repetições independentes para reduzir a dependência de uma única execução.
+  for(let batch=0;batch<10;batch++) {
+    const seed=base.slice();
+    let p=start;
+    const a=simulateTest(count,seed,p,strategyA,stake,payout,duration);
+    const b=simulateTest(count,seed,p,strategyB,stake,payout,duration);
+    all.push({a,b});
+    $("progress").value=(batch+1)*10;
+    $("testStatus").textContent=`Repetição ${batch+1} de 10 concluída.`;
+    await new Promise(resolve=>setTimeout(resolve,0));
+  }
+
+  const summarize=key=>{
+    const xs=all.map(o=>o[key]);
+    return {
+      avgNet:mean(xs.map(s=>s.net)),
+      avgRate:mean(xs.map(s=>s.trades?s.wins/s.trades*100:0)),
+      avgTrades:mean(xs.map(s=>s.trades)),
+      stops:xs.filter(s=>s.stopped).length,
+      avgDD:mean(xs.map(s=>s.maxDD)),
+      profitable:xs.filter(s=>s.net>0).length
+    };
+  };
+  const a=summarize("a"), b=summarize("b");
+  function card(name,x) {
+    return `<div class="panel"><h3>${name}</h3>`+
+      `<p>Lucro médio: <b class="${x.avgNet>=0?'green':'red'}">${money(x.avgNet)}</b></p>`+
+      `<p>Taxa média: <b>${x.avgRate.toFixed(1)}%</b></p>`+
+      `<p>Operações médias: <b>${x.avgTrades.toFixed(1)}</b></p>`+
+      `<p>Quedas máximas médias: <b>${money(x.avgDD)}</b></p>`+
+      `<p>Repetições lucrativas: <b>${x.profitable}/10</b></p>`+
+      `<p>Sessões interrompidas por proteção: <b>${x.stops}/10</b></p></div>`;
+  }
+  $("testResults").innerHTML=
+    `<div class="columns">${card("Estratégia A",a)}${card("Estratégia B",b)}</div>`+
+    `<p class="small" style="margin-top:12px">Cada sistema foi testado em 10 execuções independentes. `+
+    `A proteção pode interromper uma sessão antes do total solicitado. `+
+    `A taxa de acerto não considera que os lucros e perdas têm valores diferentes. `+
+    `Resultados são sintéticos e não são uma previsão do mercado real.</p>`;
+  $("testStatus").textContent="Laboratório concluído.";
+  $("progress").hidden=true;
+  $("runTest").disabled=false;
+  busy=false;
+}
+
+$("runTest").addEventListener("click",runLaboratory);
+$("toggleLive").addEventListener("click",()=>{
+  live=!live;
+  if(live) {
+    $("toggleLive").textContent="Parar monitoramento contínuo";
+    liveTimer=setInterval(updateLive,1000);
+  } else {
+    clearInterval(liveTimer);
+    $("toggleLive").textContent="Iniciar monitoramento contínuo";
+  }
+});
+$("reset").addEventListener("click",()=>{
+  live=false;clearInterval(liveTimer);
+  states=[newState(),newState()];
+  liveHistory=[];
+  $("toggleLive").textContent="Iniciar monitoramento contínuo";
+  $("testResults").textContent="Sessão reiniciada. Execute um novo laboratório.";
+  $("testStatus").textContent="Pronto.";
+  render();
+});
+
+for(let i=0;i<35;i++) price=tickSeries(prices,price);
+render();
+})();
 </script>
 </body>
-</html>
+     </html>
