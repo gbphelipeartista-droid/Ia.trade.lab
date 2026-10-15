@@ -1,27 +1,451 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1020">
-<title>LA Trade Lab — Simulador conservador</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LA Trade Lab | Simulador Multimercado</title>
 <style>
-:root{--bg:#0b1020;--card:#151e32;--deep:#0a1428;--text:#edf2ff;--muted:#98a6c3;--blue:#83aaff;--green:#36d69a;--red:#ff6688;--yellow:#f5c76a}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,sans-serif}main{max-width:720px;margin:auto;padding:18px 13px 40px}header{padding:8px 3px 18px}h1{font-size:25px;margin:8px 0}h2{font-size:20px;margin:0 0 14px}.small{font-size:12px;color:var(--muted)}.card{background:var(--card);border-radius:21px;padding:19px;margin-bottom:16px}.pill{display:inline-block;background:var(--deep);color:var(--muted);border-radius:30px;padding:5px 10px;font-size:12px}.balance{font-size:36px;font-weight:750}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat{background:var(--deep);border-radius:12px;padding:12px;min-width:0}.stat span{display:block;font-size:12px;color:var(--muted)}.stat strong{display:block;font-size:19px;overflow-wrap:anywhere}canvas{width:100%;height:190px;background:var(--deep);border-radius:10px;display:block;margin:12px 0}.signal{font-weight:750;font-size:22px;margin:8px 0}.green{color:var(--green)}.red{color:var(--red)}.yellow{color:var(--yellow)}label{display:block;color:var(--muted);font-size:13px;margin:12px 0 5px}input,select{width:100%;padding:12px;border-radius:9px;border:1px solid #34415c;background:var(--deep);color:var(--text);font:inherit}button{border:0;border-radius:10px;padding:13px 10px;font:inherit;font-weight:700;cursor:pointer}.primary{background:var(--blue);color:#071020;width:100%;margin-top:12px}.secondary{background:#293854;color:var(--text);width:100%;margin-top:9px}.note{background:var(--deep);padding:12px;border-radius:10px;color:var(--muted);font-size:12px;margin-top:12px}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:9px 5px;border-bottom:1px solid #2b3851}th{color:var(--muted);font-weight:500}progress{width:100%;height:13px;accent-color:var(--blue)}.status{font-size:13px;color:var(--muted);margin-top:8px}@media(max-width:390px){.card{padding:15px}.balance{font-size:31px}.stat strong{font-size:16px}}
-</style></head><body><main>
-<header><span class="pill">LA TRADE LAB · SIMULADOR EDUCATIVO</span><h1>Estratégia conservadora</h1><p class="small">Mercado sintético para aprendizagem. Não usa cotações reais nem envia ordens.</p></header>
-<section class="card"><h2>Saldo virtual</h2><div class="balance" id="balance">R$ 50,00</div><p>Resultado da sessão: <b id="net">R$ 0,00</b></p><div class="grid"><div class="stat"><span>Operações concluídas</span><strong id="trades">0</strong></div><div class="stat"><span>Acertos</span><strong id="wins">0</strong></div><div class="stat"><span>Taxa de acerto</span><strong id="rate">—</strong></div><div class="stat"><span>Perdas consecutivas</span><strong id="streak">0</strong></div></div></section>
-<section class="card"><h2>Mercado simulado</h2><p class="small">Preço sintético atual</p><div id="price" class="balance">1.08342</div><canvas id="chart" width="700" height="230"></canvas><div class="grid"><div class="stat"><span>Média móvel curta (5)</span><strong id="fast">—</strong></div><div class="stat"><span>Média móvel longa (12)</span><strong id="slow">—</strong></div><div class="stat"><span>RSI (14)</span><strong id="rsi">—</strong></div><div class="stat"><span>Momentum</span><strong id="momentum">—</strong></div></div><div id="signal" class="signal yellow">AGUARDAR</div><p id="reason" class="small">Aguardando dados suficientes.</p><div class="note">Os preços são gerados aleatoriamente. Indicadores técnicos não garantem a próxima direção.</div></section>
-<section class="card"><h2>Configurar automação</h2><label for="stake">Entrada por operação</label><select id="stake"><option value="2" selected>R$ 2,00</option><option value="1">R$ 1,00</option></select><label for="duration">Duração simulada</label><select id="duration"><option value="3">3 atualizações</option><option value="5" selected>5 atualizações</option><option value="10">10 atualizações</option></select><label for="speed">Velocidade da simulação</label><select id="speed"><option value="1200">Normal</option><option value="600">Rápida</option></select><button class="primary" id="toggle">Iniciar modo automático</button><button class="secondary" id="reset">Reiniciar sessão virtual</button><p class="status" id="status">Automação parada.</p><div class="note"><b>Proteções:</b> perda máxima de R$ 5 por sessão, pausa após 3 perdas consecutivas e nenhuma entrada quando os indicadores não concordam. A proteção não evita resultados negativos antes de ser acionada.</div></section>
-<section class="card"><h2>Histórico de operações</h2><div id="history"><p class="small">Nenhuma operação concluída.</p></div><button class="secondary" id="clearHistory">Limpar histórico visível</button></section>
-<section class="card"><h2>Sobre a estratégia</h2><p>O sistema só considera SUBIDA quando a média curta está acima da longa, o momentum é positivo e o RSI está numa faixa definida. Para QUEDA, os critérios são invertidos. Nos outros casos, escolhe AGUARDAR.</p><p class="small">Esta é uma regra técnica experimental, não uma IA treinada. Resultados positivos no simulador não demonstram vantagem financeira em mercados reais.</p></section>
-</main><script>
-(()=>{'use strict';const $=id=>document.getElementById(id),INITIAL=50,LIMIT=5,MAX_STREAK=3,PAYOUT=.8;const money=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});const fmt=n=>n.toFixed(5);let price=1.08342,prices=[],timer=null,running=false,history=[],s=newState();function newState(){return{balance:INITIAL,net:0,trades:0,wins:0,losses:0,streak:0,peak:INITIAL,maxDD:0,paused:false,pending:null,cooldown:0}}
-function nextPrice(){const last=prices.length?prices[prices.length-1]:price,prev=prices.length>1?prices[prices.length-2]:last;return Math.max(.5,last+(Math.random()-.5)*.0009+(prev-last)*.12)}function tick(){price=nextPrice();prices.push(price);if(prices.length>160)prices.shift()}
-function mean(a){return a.reduce((x,y)=>x+y,0)/a.length}function getRSI(a,n=14){if(a.length<n+1)return null;let up=0,down=0;for(let i=a.length-n;i<a.length;i++){let d=a[i]-a[i-1];if(d>0)up+=d;else down-=d}if(!up&&!down)return 50;if(!down)return 100;return 100-100/(1+up/down)}function indicators(a){if(a.length<20)return null;return{fast:mean(a.slice(-5)),slow:mean(a.slice(-12)),rsi:getRSI(a),momentum:(a[a.length-1]-a[a.length-4])/a[a.length-4]*100}}
-function getSignal(){const x=indicators(prices);if(!x)return{signal:'AGUARDAR',reason:'Aguardando pelo menos 20 pontos sintéticos.'};if(x.fast>x.slow&&x.momentum>.005&&x.rsi>=52&&x.rsi<=65)return{signal:'SUBIDA',reason:'Médias, momentum e RSI alinhados.'};if(x.fast<x.slow&&x.momentum<-.005&&x.rsi>=35&&x.rsi<=48)return{signal:'QUEDA',reason:'Médias, momentum e RSI alinhados.'};return{signal:'AGUARDAR',reason:'Filtros conservadores não concordam.'}}
-function canOpen(){return!s.paused&&!s.pending&&s.balance>=Number($('stake').value)&&s.streak<MAX_STREAK&&(INITIAL-s.balance)<LIMIT-1e-8}function pauseCheck(){if(INITIAL-s.balance>=LIMIT-1e-8){s.paused=true;stop('Limite de perda de R$ 5 atingido.');}if(s.streak>=MAX_STREAK){s.paused=true;stop('Pausa de proteção após 3 perdas consecutivas.')}}function openTrade(signal){if(!canOpen()||!['SUBIDA','QUEDA'].includes(signal))return;s.pending={signal,start:price,stake:Number($('stake').value),duration:Number($('duration').value),elapsed:0}}
-function settle(){const t=s.pending,move=price-t.start,win=t.signal==='SUBIDA'?move>0:move<0,result=win?t.stake*PAYOUT:-t.stake;s.balance+=result;s.net+=result;s.trades++;if(win){s.wins++;s.streak=0}else{s.losses++;s.streak++}s.peak=Math.max(s.peak,s.balance);s.maxDD=Math.max(s.maxDD,s.peak-s.balance);history.unshift({signal:t.signal,win,result,balance:s.balance});if(history.length>100)history.length=100;s.pending=null;s.cooldown=2;pauseCheck()}
-function draw(){const c=$('chart'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle='#0a1428';ctx.fillRect(0,0,c.width,c.height);if(prices.length<2)return;const lo=Math.min(...prices),hi=Math.max(...prices),range=hi-lo||1;ctx.strokeStyle='#83aaff';ctx.lineWidth=2.5;ctx.beginPath();prices.forEach((p,i)=>{const x=8+i/(prices.length-1)*(c.width-16),y=c.height-12-(p-lo)/range*(c.height-24);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y)});ctx.stroke()}
-function render(){const x=indicators(prices),r=getSignal();$('balance').textContent=money(s.balance);$('net').textContent=money(s.net);$('net').className=s.net>=0?'green':'red';$('trades').textContent=s.trades;$('wins').textContent=s.wins;$('rate').textContent=s.trades?(s.wins/s.trades*100).toFixed(1)+'%':'—';$('streak').textContent=s.streak;$('price').textContent=fmt(price);$('fast').textContent=x?fmt(x.fast):'—';$('slow').textContent=x?fmt(x.slow):'—';$('rsi').textContent=x?x.rsi.toFixed(1):'—';$('momentum').textContent=x?x.momentum.toFixed(3)+'%':'—';$('signal').textContent=s.paused?'PAUSADO':r.signal;$('signal').className='signal '+(s.paused?'red':r.signal==='SUBIDA'?'green':r.signal==='QUEDA'?'red':'yellow');$('reason').textContent=s.paused?'Proteção ativada. Reinicie a sessão para recomeçar.':r.reason;draw();renderHistory()}
-function renderHistory(){if(!history.length){$('history').innerHTML='<p class="small">Nenhuma operação concluída.</p>';return}$('history').innerHTML='<div class="table-wrap"><table><thead><tr><th>Direção</th><th>Resultado</th><th>Variação</th><th>Saldo</th></tr></thead><tbody>'+history.map(h=>`<tr><td>${h.signal}</td><td class="${h.win?'green':'red'}">${h.win?'Acerto':'Erro'}</td><td>${money(h.result)}</td><td>${money(h.balance)}</td></tr>`).join('')+'</tbody></table></div>'}
-function step(){tick();if(s.pending){s.pending.elapsed++;if(s.pending.elapsed>=s.pending.duration)settle()}else if(running&&!s.paused){if(s.cooldown>0)s.cooldown--;else openTrade(getSignal().signal)}render();if(s.paused)stop('Automação pausada pela proteção de risco.')}function stop(message='Automação parada.'){running=false;if(timer)clearInterval(timer);timer=null;$('toggle').textContent='Iniciar modo automático';$('status').textContent=message}function start(){if(s.paused){$('status').textContent='A proteção está ativa. Reinicie a sessão antes de operar novamente.';return}running=true;$('toggle').textContent='Parar modo automático';$('status').textContent='Modo automático ativo; entradas podem ficar em AGUARDAR.';timer=setInterval(step,Number($('speed').value))}
-$('toggle').addEventListener('click',()=>running?stop():start());$('reset').addEventListener('click',()=>{stop('Sessão virtual reiniciada.');s=newState();history=[];render()});$('clearHistory').addEventListener('click',()=>{history=[];renderHistory()});$('speed').addEventListener('change',()=>{if(running){stop('Velocidade alterada. Toque em iniciar para continuar.')}});for(let i=0;i<35;i++)tick();render();})();
-</script></body></html>
+:root{--bg:#090d16;--panel:#111827;--panel2:#182235;--border:#29364b;--text:#eef3ff;--muted:#94a3b8;--green:#2de39a;--red:#ff657a;--blue:#69a7ff;--yellow:#ffd166}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+header{padding:22px 18px;border-bottom:1px solid var(--border);background:#0c1220}
+.wrap{width:min(1150px,100%);margin:auto;padding:0 16px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;color:#07131a;background:var(--green);font-weight:900;font-size:19px}
+h1{margin:0;font-size:22px}h2{font-size:17px;margin:0 0 14px}p{line-height:1.5}
+.muted{color:var(--muted)}.small{font-size:12px}
+.status{display:inline-flex;align-items:center;gap:7px;color:var(--yellow);border:1px solid #66552c;background:#292313;border-radius:30px;padding:7px 10px;font-size:12px;margin-top:12px}
+.status.real{color:var(--green);border-color:#1f6a4d;background:#0f2a21}
+.status.off{color:var(--red);border-color:#6a2230;background:#2a121a}
+.dot{width:7px;height:7px;background:currentColor;border-radius:50%}
+main{padding:22px 0 38px}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:15px;padding:17px;min-width:0}
+.span-12{grid-column:span 12}.span-8{grid-column:span 8}.span-6{grid-column:span 6}.span-4{grid-column:span 4}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.metric{background:var(--panel2);padding:13px;border-radius:11px;min-width:0}
+.metric-label{color:var(--muted);font-size:12px}
+.metric-value{font-size:clamp(17px,3vw,24px);font-weight:700;margin-top:7px;overflow-wrap:anywhere}
+label{display:block;color:var(--muted);font-size:12px;margin-bottom:7px}
+select,input[type=number]{width:100%;padding:12px;background:#0b1220;border:1px solid var(--border);color:var(--text);border-radius:9px;outline:none}
+select:focus,input:focus{border-color:var(--blue)}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field{min-width:0}
+button{border:0;border-radius:9px;padding:12px 14px;font-weight:700;cursor:pointer;color:#08121b;background:var(--green)}
+button.secondary{background:#26344b;color:var(--text)}
+button.up{background:#164e3a;color:#70ffc1}button.down{background:#582634;color:#ff9baa}
+button.kill{background:#8a1f35;color:#fff}
+.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.actions button{min-height:46px}
+.chart-box{position:relative;width:100%;height:260px;background:#0b1220;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+canvas{width:100%;height:100%;display:block}
+.signal{padding:15px;border-radius:11px;background:var(--panel2);margin-bottom:12px}
+.signal-title{font-weight:800;font-size:19px}
+.green{color:var(--green)}.red{color:var(--red)}.yellow{color:var(--yellow)}
+.bar{height:7px;background:#273449;border-radius:10px;overflow:hidden;margin-top:8px}
+.bar>div{height:100%;width:0;background:var(--blue);transition:width .2s}
+.notice{padding:12px;border-radius:9px;background:#292313;border:1px solid #66552c;color:#ffe8a3;font-size:12px;line-height:1.5}
+.history{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
+th,td{padding:11px 8px;text-align:left;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:500}
+.switch-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0}
+.switch-row input{width:20px;height:20px;accent-color:var(--green)}
+.footer{color:var(--muted);font-size:12px;text-align:center;padding:24px 10px}
+.stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:760px){
+.span-8,.span-6,.span-4{grid-column:span 12}
+.metrics,.stats{grid-template-columns:1fr}
+.metric{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.metric-value{margin:0}.fields{grid-template-columns:1fr}.chart-box{height:220px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<div class="brand"><div class="logo">LA</div><div><h1>LA Trade Lab</h1><div class="muted small">Laboratório de análise e simulação multimercado</div></div></div>
+<div class="status" id="status"><span class="dot"></span><span id="statusText">Iniciando…</span></div>
+</div></header>
+
+<main class="wrap"><div class="grid">
+
+<section class="card span-12"><h2>Seu painel</h2>
+<div class="metrics">
+<div class="metric"><div class="metric-label">Saldo virtual</div><div class="metric-value" id="balance">R$ 50,00</div></div>
+<div class="metric"><div class="metric-label">Resultado acumulado (líquido)</div><div class="metric-value" id="profit">R$ 0,00</div></div>
+<div class="metric"><div class="metric-label">Operações encerradas</div><div class="metric-value" id="tradeCount">0</div></div>
+</div></section>
+
+<section class="card span-4"><h2>Mercado e ativo</h2>
+<div class="field"><label for="market">Escolha o mercado</label>
+<select id="market">
+<option value="crypto">Criptomoedas (dados reais)</option>
+<option value="b3">Ações brasileiras — B3 (sintético)</option>
+<option value="us">Ações americanas (sintético)</option>
+<option value="forex">Forex — moedas (sintético)</option>
+</select></div>
+<div class="field" style="margin-top:12px"><label for="asset">Ativo</label><select id="asset"></select></div>
+<p class="muted small" id="assetInfo"></p>
+<div class="notice" id="srcNotice"></div>
+</section>
+
+<section class="card span-8"><h2>Preço</h2>
+<div class="metrics">
+<div class="metric"><div class="metric-label">Preço atual</div><div class="metric-value" id="price">—</div></div>
+<div class="metric"><div class="metric-label">Variação na sessão</div><div class="metric-value" id="change">—</div></div>
+<div class="metric"><div class="metric-label">Última atualização</div><div class="metric-value" id="updated" style="font-size:16px">—</div></div>
+</div>
+<div class="chart-box" style="margin-top:14px"><canvas id="chart" aria-label="Gráfico de preços"></canvas></div>
+<p class="muted small" id="chartNote"></p>
+</section>
+
+<section class="card span-6"><h2>Análise automática experimental</h2>
+<div class="signal"><div class="muted small">Leitura dos indicadores</div>
+<div class="signal-title yellow" id="signal">AGUARDAR</div>
+<p class="muted small" id="reason">Aguardando dados suficientes.</p></div>
+<div class="field"><label>Média móvel curta (SMA 5)</label><div class="metric-value" id="smaShort">—</div></div>
+<div class="field" style="margin-top:14px"><label>Média móvel longa (SMA 12)</label><div class="metric-value" id="smaLong">—</div></div>
+<div class="field" style="margin-top:14px"><label>RSI simplificado (14)</label><div class="metric-value" id="rsi">—</div><div class="bar"><div id="rsiBar"></div></div></div>
+<p class="muted small">Regra técnica fixa, não é inteligência artificial e não prevê o mercado.</p>
+</section>
+
+<section class="card span-6"><h2>Operações virtuais</h2>
+<div class="fields">
+<div class="field"><label for="stake">Valor por operação (R$)</label><input id="stake" type="number" min="1" max="5" step="1" value="2"></div>
+<div class="field"><label for="duration">Duração</label><select id="duration"><option value="10">10 segundos</option><option value="20" selected>20 segundos</option><option value="30">30 segundos</option><option value="60">60 segundos</option></select></div>
+<div class="field"><label for="cost">Custo por operação (R$)</label><input id="cost" type="number" min="0" max="1" step="0.01" value="0.05"></div>
+</div>
+<div class="actions">
+<button class="up" id="upBtn">SIMULAR SUBIDA</button>
+<button class="down" id="downBtn">SIMULAR QUEDA</button>
+</div>
+<div class="switch-row"><div><strong>Modo automático</strong><div class="muted small">Só funciona com dados reais.</div></div>
+<input id="autoMode" type="checkbox" aria-label="Ativar modo automático"></div>
+<div class="notice" id="autoStatus">Automação desligada. Nenhuma ordem real será enviada.</div>
+<div class="actions">
+<button class="kill" id="killBtn">PARADA DE EMERGÊNCIA</button>
+<button class="secondary" id="csvBtn">Exportar histórico (CSV)</button>
+<button class="secondary" id="resetBtn">Reiniciar tudo</button>
+<button class="secondary" id="clearBtn">Limpar histórico</button>
+</div>
+<p class="muted small">Pagamento fixo de 80% se acertar e perda do valor se errar, como em opções binárias. Isso não representa ações, cripto ou Forex reais.</p>
+</section>
+
+<section class="card span-12"><h2>Desempenho (só operações com dados reais)</h2>
+<div class="metrics stats">
+<div class="metric"><div class="metric-label">Taxa de acerto</div><div class="metric-value" id="stRate">—</div></div>
+<div class="metric"><div class="metric-label">Expectativa por operação</div><div class="metric-value" id="stExp">—</div></div>
+<div class="metric"><div class="metric-label">Fator de lucro</div><div class="metric-value" id="stPF">—</div></div>
+<div class="metric"><div class="metric-label">Drawdown máximo</div><div class="metric-value" id="stDD">—</div></div>
+</div>
+<p class="muted small" id="stNote"></p>
+</section>
+
+<section class="card span-12"><h2>Operações em andamento</h2><div id="openTrades" class="muted small">Nenhuma operação em andamento.</div></section>
+
+<section class="card span-12"><h2>Histórico e registro de decisões</h2>
+<div class="history"><table><thead><tr><th>Data e hora</th><th>Ativo</th><th>Fonte</th><th>Origem</th><th>Direção</th><th>Entrada</th><th>Saída</th><th>Valor</th><th>Resultado líquido</th><th>Saldo</th></tr></thead>
+<tbody id="history"></tbody></table></div>
+</section>
+
+<section class="card span-12"><h2>Limites de segurança</h2>
+<div class="notice">
+• Saldo inicial virtual: R$ 50,00. Valor por operação: R$ 1 a R$ 5. Uma operação aberta por vez.<br>
+• O modo automático para com saldo abaixo de R$ 2, perda acumulada de R$ 10, 3 perdas seguidas, dados atrasados ou parada de emergência.<br>
+• Sem dados reais recentes, nenhuma operação nova é aberta.<br>
+• O histórico fica salvo neste navegador. Nenhuma conta ou corretora é acessada.<br>
+• Nunca insira senhas ou chaves de API neste arquivo público.
+</div></section>
+
+</div></main>
+<div class="footer">LA Trade Lab · Ferramenta educacional · Todos os resultados são simulados</div>
+
+<script>
+(() => {
+"use strict";
+const INITIAL_BALANCE=50, PAYOUT=0.80, MAX_STAKE=5, MAX_LOSS=10, MAX_CONSEC=3, STALE_MS=8000, MIN_SAMPLE=100, KEY="latradelab.v2";
+
+const markets={
+crypto:{label:"Criptomoedas",currency:"US$",real:true,assets:[
+{symbol:"BTC/USD",name:"Bitcoin",base:65000,bn:"BTCUSDT",cb:"BTC-USD"},
+{symbol:"ETH/USD",name:"Ethereum",base:3200,bn:"ETHUSDT",cb:"ETH-USD"},
+{symbol:"SOL/USD",name:"Solana",base:150,bn:"SOLUSDT",cb:"SOL-USD"},
+{symbol:"XRP/USD",name:"XRP",base:0.6,bn:"XRPUSDT",cb:"XRP-USD"}]},
+b3:{label:"Ações brasileiras — B3",currency:"R$",assets:[
+{symbol:"PETR4",name:"Petrobras PN",base:35},{symbol:"VALE3",name:"Vale ON",base:60},
+{symbol:"ITUB4",name:"Itaú Unibanco PN",base:32},{symbol:"BBAS3",name:"Banco do Brasil ON",base:28}]},
+us:{label:"Ações americanas",currency:"US$",assets:[
+{symbol:"AAPL",name:"Apple",base:220},{symbol:"MSFT",name:"Microsoft",base:450},
+{symbol:"NVDA",name:"NVIDIA",base:140},{symbol:"TSLA",name:"Tesla",base:300}]},
+forex:{label:"Forex — moedas",currency:"",assets:[
+{symbol:"EUR/USD",name:"Euro / Dólar",base:1.08},{symbol:"GBP/USD",name:"Libra / Dólar",base:1.27},
+{symbol:"USD/JPY",name:"Dólar / Iene",base:150},{symbol:"AUD/USD",name:"Dólar australiano / Dólar",base:0.66}]}
+};
+
+const $=id=>document.getElementById(id);
+let balance=INITIAL_BALANCE, cumulative=0, history=[], openTrades=[], killed=false;
+let prices=[], currentPrice=0, initialPrice=0, autoTimer=null, lastAuto=0;
+let marketKey="crypto", assetIndex=0, tradeId=1, gen=0, busy=false, lastOk=0, feedSource="";
+
+const asset=()=>markets[marketKey].assets[assetIndex];
+const isReal=()=>!!markets[marketKey].real;
+const feedOk=()=>!isReal()||(Date.now()-lastOk<STALE_MS&&currentPrice>0);
+const money=v=>"R$ "+v.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtTime=(d=new Date())=>d.toLocaleTimeString("pt-BR");
+const fmtDT=iso=>new Date(iso).toLocaleString("pt-BR");
+function quote(v,mk=marketKey){
+  const c=markets[mk].currency, d=v<1?5:v<100?3:2;
+  return (c?c+" ":"")+v.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+
+/* ---------- persistência ---------- */
+function save(){try{localStorage.setItem(KEY,JSON.stringify({balance,cumulative,killed,tradeId,history:history.slice(0,1000)}))}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s){balance=s.balance;cumulative=s.cumulative;killed=!!s.killed;tradeId=s.tradeId||1;history=s.history||[]}}catch(e){}}
+
+/* ---------- preços ---------- */
+async function fetchReal(a){
+  const opt={signal:AbortSignal.timeout(4000)};
+  try{
+    const r=await fetch("https://data-api.binance.vision/api/v3/ticker/price?symbol="+a.bn,opt);
+    if(!r.ok)throw 0; const p=+(await r.json()).price; if(!(p>0))throw 0;
+    return {p,src:"Binance (USDT)"};
+  }catch(e){
+    const r=await fetch("https://api.exchange.coinbase.com/products/"+a.cb+"/ticker",{signal:AbortSignal.timeout(4000)});
+    if(!r.ok)throw 0; const p=+(await r.json()).price; if(!(p>0))throw 0;
+    return {p,src:"Coinbase"};
+  }
+}
+async function pollReal(){
+  if(busy)return; busy=true; const g=gen;
+  try{const {p,src}=await fetchReal(asset()); if(g===gen){feedSource=src;lastOk=Date.now();pushPrice(p)}}
+  catch(e){if(g===gen)render()}
+  finally{busy=false}
+}
+function pushPrice(p){
+  currentPrice=p; if(!initialPrice)initialPrice=p;
+  prices.push(p); if(prices.length>100)prices.shift();
+  $("updated").textContent=fmtTime();
+  settleTrades(); render();
+}
+function tick(){
+  if(isReal()){pollReal();return}
+  const vol=marketKey==="forex"?0.0008:0.0025;
+  pushPrice(Math.max(0.00001,currentPrice*(1+(Math.random()-0.5)*vol)));
+}
+function resetSeries(){
+  gen++; busy=false; lastOk=0; feedSource="";
+  prices=[]; currentPrice=0; initialPrice=0;
+  if(!isReal()){
+    const b=asset().base;
+    for(let i=0;i<30;i++)prices.push(b*(1+(Math.random()-0.5)*0.006));
+    currentPrice=prices[29]; initialPrice=prices[0];
+  }
+  $("assetInfo").textContent=markets[marketKey].label+" · "+asset().name;
+  $("srcNotice").textContent=isReal()
+    ?"Cotações reais de exchanges públicas, atualizadas a cada segundo. Os indicadores precisam de cerca de 15 segundos de dados. Operações continuam virtuais."
+    :"Preços inventados pelo simulador, sem relação com o mercado. Serve só para testar a interface. Estas operações não entram no desempenho.";
+  $("chartNote").textContent=isReal()?"Preços reais coletados desde que a página foi aberta.":"Gráfico de preços sintéticos gerados localmente.";
+  render();
+}
+function setMarketOptions(){
+  const s=$("asset"); s.innerHTML="";
+  markets[marketKey].assets.forEach((it,i)=>{const o=document.createElement("option");o.value=i;o.textContent=it.symbol+" — "+it.name;s.appendChild(o)});
+  assetIndex=0; resetSeries();
+}
+
+/* ---------- indicadores ---------- */
+const avg=a=>a.length?a.reduce((s,n)=>s+n,0)/a.length:0;
+const sma=n=>prices.length<n?null:avg(prices.slice(-n));
+function rsi(period=14){
+  if(prices.length<=period)return null;
+  let g=0,l=0;
+  for(let i=prices.length-period;i<prices.length;i++){const d=prices[i]-prices[i-1];if(d>0)g+=d;if(d<0)l-=d}
+  if(!g&&!l)return 50; if(!l)return 100;
+  return 100-100/(1+g/l);
+}
+function analyze(){
+  const s=sma(5),l=sma(12),r=rsi(14);
+  if(s===null||l===null||r===null)return{signal:"AGUARDAR",reason:"Coletando dados suficientes.",s,l,r};
+  if(s>l&&r>=45&&r<68)return{signal:"SUBIDA",reason:"Média curta acima da longa e RSI na faixa definida.",s,l,r};
+  if(s<l&&r>32&&r<=55)return{signal:"QUEDA",reason:"Média curta abaixo da longa e RSI na faixa definida.",s,l,r};
+  return{signal:"AGUARDAR",reason:"Critérios não alinhados.",s,l,r};
+}
+
+/* ---------- estatísticas ---------- */
+function stats(){
+  const t=history.filter(h=>h.src==="real").slice().reverse();
+  const n=t.length; if(!n)return null;
+  const wins=t.filter(h=>h.outcome==="W").length;
+  const net=t.reduce((s,h)=>s+h.result,0);
+  const gw=t.filter(h=>h.result>0).reduce((s,h)=>s+h.result,0);
+  const gl=-t.filter(h=>h.result<0).reduce((s,h)=>s+h.result,0);
+  let eq=0,peak=0,dd=0;
+  for(const h of t){eq+=h.result;peak=Math.max(peak,eq);dd=Math.max(dd,peak-eq)}
+  return{n,rate:wins/n,exp:net/n,pf:gl?gw/gl:(gw?Infinity:0),dd};
+}
+function renderStats(){
+  const s=stats();
+  if(!s){["stRate","stExp","stPF","stDD"].forEach(i=>$(i).textContent="—");$("stNote").textContent="Nenhuma operação com dados reais ainda.";return}
+  $("stRate").textContent=(s.rate*100).toFixed(1)+"%";
+  $("stExp").textContent=(s.exp>0?"+":"")+money(s.exp);
+  $("stExp").className="metric-value "+(s.exp>0?"green":"red");
+  $("stPF").textContent=s.pf===Infinity?"∞":s.pf.toFixed(2);
+  $("stDD").textContent=money(s.dd);
+  $("stNote").textContent=s.n+" operações reais. "+(s.n<MIN_SAMPLE?"Amostra pequena (mínimo de "+MIN_SAMPLE+"): estes números ainda não provam nada. ":"")+"Com pagamento de 80%, o equilíbrio exige acerto acima de 55,6%.";
+}
+
+/* ---------- desenho ---------- */
+function renderChart(){
+  const cv=$("chart"),rc=cv.getBoundingClientRect(); if(!rc.width||!rc.height)return;
+  const r=window.devicePixelRatio||1; cv.width=Math.round(rc.width*r); cv.height=Math.round(rc.height*r);
+  const c=cv.getContext("2d"); c.scale(r,r); const w=rc.width,h=rc.height; c.clearRect(0,0,w,h);
+  c.strokeStyle="#243148";c.lineWidth=1;
+  for(let i=1;i<=4;i++){const y=h/5*i;c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke()}
+  if(prices.length<2){c.fillStyle="#94a3b8";c.font="13px Arial";c.fillText(isReal()?"Aguardando cotações…":"",12,h/2);return}
+  const mn=Math.min(...prices),mx=Math.max(...prices),rg=mx-mn||Math.abs(mx*0.001)||1,pad=18;
+  c.strokeStyle="#2de39a";c.lineWidth=2;c.beginPath();
+  prices.forEach((p,i)=>{const x=pad+i/Math.max(1,prices.length-1)*(w-pad*2),y=h-pad-(p-mn)/rg*(h-pad*2);i?c.lineTo(x,y):c.moveTo(x,y)});
+  c.stroke(); c.fillStyle="#94a3b8";c.font="11px Arial";c.fillText(quote(mx),8,14);c.fillText(quote(mn),8,h-5);
+}
+function renderHistory(){
+  const tb=$("history");
+  if(!history.length){tb.innerHTML='<tr><td colspan="10" class="muted">Nenhuma operação realizada.</td></tr>';return}
+  tb.innerHTML=history.slice(0,50).map(h=>{
+    const cl=h.result>0?"green":h.result<0?"red":"muted";
+    return `<tr><td>${fmtDT(h.ts)}</td><td>${h.asset}</td><td>${h.src==="real"?"Real":"Sintético"}</td><td>${h.mode}</td><td>${h.dir}</td><td>${h.entry}</td><td>${h.exit}</td><td>${money(h.stake)}</td><td class="${cl}">${h.result>0?"+":""}${money(h.result)}</td><td>${money(h.balance)}</td></tr>`}).join("");
+}
+function renderOpen(){
+  if(!openTrades.length){$("openTrades").textContent="Nenhuma operação em andamento.";return}
+  $("openTrades").innerHTML=openTrades.map(t=>{
+    const s=Math.max(0,Math.ceil((t.endAt-Date.now())/1000));
+    return `<div class="metric" style="margin-bottom:8px"><strong>${t.dir} · ${t.asset}</strong><span>${money(t.stake)} · faltam ${s}s</span></div>`}).join("");
+}
+function renderStatus(){
+  const el=$("status"),tx=$("statusText");
+  if(killed){el.className="status off";tx.textContent="PARADA DE EMERGÊNCIA ATIVA";return}
+  if(!isReal()){el.className="status";tx.textContent="SINTÉTICO — sem cotações reais";return}
+  if(feedOk()){el.className="status real";tx.textContent="DADOS REAIS · "+feedSource+" · operações virtuais"}
+  else{el.className="status off";tx.textContent="Sem dados reais recentes — operações bloqueadas"}
+}
+function render(){
+  $("balance").textContent=money(balance);
+  $("profit").textContent=(cumulative>0?"+":"")+money(cumulative);
+  $("profit").className="metric-value "+(cumulative>0?"green":cumulative<0?"red":"");
+  $("tradeCount").textContent=history.length;
+  $("price").textContent=currentPrice?quote(currentPrice):"—";
+  const ch=initialPrice?(currentPrice-initialPrice)/initialPrice*100:0;
+  $("change").textContent=currentPrice?(ch>0?"+":"")+ch.toFixed(3)+"%":"—";
+  $("change").className="metric-value "+(ch>0?"green":ch<0?"red":"");
+  const a=analyze(),sg=$("signal");
+  sg.textContent=a.signal; sg.className="signal-title "+(a.signal==="SUBIDA"?"green":a.signal==="QUEDA"?"red":"yellow");
+  $("reason").textContent=a.reason;
+  $("smaShort").textContent=a.s===null?"Calculando...":quote(a.s);
+  $("smaLong").textContent=a.l===null?"Calculando...":quote(a.l);
+  $("rsi").textContent=a.r===null?"Calculando...":a.r.toFixed(1);
+  $("rsiBar").style.width=a.r===null?"0%":a.r+"%";
+  renderStatus(); renderChart(); renderHistory(); renderOpen(); renderStats();
+}
+
+/* ---------- operações ---------- */
+function consecLosses(){let n=0;for(const h of history){if(h.outcome==="L")n++;else if(h.outcome==="W")break}return n}
+function createTrade(dir,auto=false){
+  const stake=Number($("stake").value),cost=Number($("cost").value)||0;
+  const fail=m=>{if(auto)stopAuto(m);else alert(m);return false};
+  if(killed)return fail("Parada de emergência ativa. Use “Reiniciar tudo” para liberar.");
+  if(!Number.isFinite(stake)||stake<1||stake>MAX_STAKE)return fail("Escolha um valor entre R$ 1,00 e R$ 5,00.");
+  if(cost<0||cost>1)return fail("O custo por operação deve ficar entre R$ 0,00 e R$ 1,00.");
+  if(openTrades.length)return fail("Já existe uma operação em andamento.");
+  if(!feedOk())return fail("Sem cotação real recente. Aguarde a conexão.");
+  if(!currentPrice)return fail("Aguardando a primeira cotação.");
+  if(stake+cost>balance)return fail("Saldo virtual insuficiente.");
+  if(cumulative<=-MAX_LOSS)return fail("Limite de perda acumulada de R$ 10,00 atingido.");
+  const a=analyze();
+  balance-=stake+cost;
+  openTrades.push({id:tradeId++,dir,stake,cost,entry:currentPrice,endAt:Date.now()+Number($("duration").value)*1000,
+    mk:marketKey,asset:asset().symbol,src:isReal()?"real":"synthetic",mode:auto?"Automático":"Manual",
+    sig:a.signal,rsi:a.r,gen});
+  save(); render(); return true;
+}
+function settleTrades(){
+  const now=Date.now(),keep=[];
+  for(const t of openTrades){
+    if(now<t.endAt||t.gen!==gen){keep.push(t);continue}
+    const won=t.dir==="SUBIDA"?currentPrice>t.entry:currentPrice<t.entry;
+    const tie=currentPrice===t.entry;
+    let gross=-t.stake,outcome="L";
+    if(won){gross=t.stake*PAYOUT;outcome="W";balance+=t.stake+gross}
+    else if(tie){gross=0;outcome="T";balance+=t.stake}
+    const result=gross-t.cost; cumulative+=result;
+    history.unshift({ts:new Date().toISOString(),asset:t.asset,src:t.src,mode:t.mode,dir:t.dir,
+      entry:quote(t.entry,t.mk),exit:quote(currentPrice,t.mk),stake:t.stake,cost:t.cost,
+      signal:t.sig,rsi:t.rsi===null?"":+t.rsi.toFixed(1),outcome,result:+result.toFixed(4),balance:+balance.toFixed(4)});
+  }
+  openTrades=keep; save();
+  if($("autoMode").checked){
+    if(cumulative<=-MAX_LOSS)stopAuto("Limite de perda acumulada atingido.");
+    else if(balance<2)stopAuto("Saldo virtual abaixo de R$ 2,00.");
+    else if(consecLosses()>=MAX_CONSEC)stopAuto("Pausa após 3 perdas seguidas.");
+  }
+}
+function stopAuto(msg){
+  $("autoMode").checked=false; if(autoTimer)clearInterval(autoTimer); autoTimer=null;
+  $("autoStatus").textContent=msg;
+}
+function startAuto(){
+  if(!isReal()){stopAuto("Modo automático só funciona com dados reais (criptomoedas).");return}
+  if(killed){stopAuto("Parada de emergência ativa.");return}
+  if(autoTimer)clearInterval(autoTimer);
+  $("autoStatus").textContent="Modo automático ativo: apenas simulações, sem ordens reais.";
+  autoTimer=setInterval(()=>{
+    if(!$("autoMode").checked||killed){stopAuto("Automação desligada.");return}
+    if(!feedOk()){stopAuto("Automação pausada: dados reais atrasados.");return}
+    if(balance<2){stopAuto("Saldo virtual abaixo de R$ 2,00.");return}
+    if(cumulative<=-MAX_LOSS){stopAuto("Limite de perda acumulada atingido.");return}
+    if(consecLosses()>=MAX_CONSEC){stopAuto("Pausa após 3 perdas seguidas.");return}
+    if(openTrades.length||Date.now()-lastAuto<10000)return;
+    const a=analyze();
+    if(a.signal==="SUBIDA"||a.signal==="QUEDA"){if(createTrade(a.signal,true))lastAuto=Date.now()}
+  },1000);
+}
+function exportCSV(){
+  if(!history.length){alert("Não há histórico para exportar.");return}
+  const cols=["ts","asset","src","mode","dir","signal","rsi","entry","exit","stake","cost","outcome","result","balance"];
+  const csv=[cols.join(",")].concat(history.map(h=>cols.map(c=>'"'+String(h[c]??"").replace(/"/g,'""')+'"').join(","))).join("\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="la-trade-lab-historico.csv"; a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ---------- eventos ---------- */
+function blockedByOpen(){if(openTrades.length){alert("Aguarde a operação em andamento terminar antes de trocar de ativo.");return true}return false}
+$("market").addEventListener("change",e=>{
+  if(blockedByOpen()){e.target.value=marketKey;return}
+  stopAuto("Mercado alterado. Confira o ativo antes de reativar a automação.");
+  marketKey=e.target.value; setMarketOptions();
+});
+$("asset").addEventListener("change",e=>{
+  if(blockedByOpen()){e.target.value=assetIndex;return}
+  stopAuto("Ativo alterado. Confira o ativo antes de reativar a automação.");
+  assetIndex=Number(e.target.value); resetSeries();
+});
+$("upBtn").addEventListener("click",()=>createTrade("SUBIDA"));
+$("downBtn").addEventListener("click",()=>createTrade("QUEDA"));
+$("autoMode").addEventListener("change",e=>e.target.checked?startAuto():stopAuto("Automação desligada. A operação aberta continua até o encerramento."));
+$("killBtn").addEventListener("click",()=>{killed=true;stopAuto("PARADA DE EMERGÊNCIA: automação desligada e novas operações bloqueadas.");save();render()});
+$("csvBtn").addEventListener("click",exportCSV);
+$("resetBtn").addEventListener("click",()=>{
+  if(!confirm("Reiniciar saldo, histórico e parada de emergência? Isso apaga o registro salvo."))return;
+  stopAuto("Sessão reiniciada. Automação desligada.");
+  balance=INITIAL_BALANCE;cumulative=0;history=[];openTrades=[];killed=false;save();render();
+});
+$("clearBtn").addEventListener("click",()=>{
+  if(!confirm("Limpar o histórico? O saldo atual será mantido, mas as estatísticas serão zeradas."))return;
+  history=[];save();render();
+});
+window.addEventListener("resize",renderChart);
+
+load(); setMarketOptions();
+setInterval(tick,1000);
+setInterval(renderOpen,500);
+})();
+</script>
+</body>
+</html>
